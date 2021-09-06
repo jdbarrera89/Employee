@@ -8,7 +8,7 @@ namespace Employee.Common.Models
 
         public DateTime CreatedTime { get; set; }
 
-        public int Type { get; set; }
+        public string Type { get; set; }
 
         public bool IsConsolidated { get; set; }
     }
