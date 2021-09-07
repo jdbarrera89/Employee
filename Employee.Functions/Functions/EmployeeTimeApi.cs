@@ -35,23 +35,7 @@ namespace Employee.Functions.Functions
                     IsSuccess = false,
                     Message = "The request must have IdEmployee and type."
                 });
-            }
-
-            switch (employeeTime.Type)
-            {
-                case "0":
-                    break;
-
-                case "1":
-                    break;
-
-                default:
-                    return new BadRequestObjectResult(new Response
-                    {
-                        IsSuccess = false,
-                        Message = "The request must have IdEmployee and type."
-                    });
-            }
+            }           
 
             EmployeeTimeEntity employeeTimeEntity = new EmployeeTimeEntity
             {
@@ -61,45 +45,63 @@ namespace Employee.Functions.Functions
                 Type = employeeTime.Type,
                 IsConsolidated = false,
                 PartitionKey = "EmployeeTime",
-                RowKey = Guid.NewGuid().ToString(),
+                RowKey = Guid.NewGuid().ToString()
             };
 
-            TableOperation findOperation = TableOperation.Retrieve<EmployeeTimeEntity>("EmployeeTime", employeeTime.IdEmployee.ToString());
-            TableResult findResult = await employeeTimeTable.ExecuteAsync(findOperation);
-            EmployeeTimeEntity employee = (EmployeeTimeEntity)findResult.Result;
 
-            if (findResult.Result)
-            //if (employeeTime.Type.Equals("1")
-            //{
-            //    if (employeeTime)
-            //}
-
-            if (employeeTime.IdEmployee.ToString() == employeeTimeEntity.IdEmployee.ToString())
-            {
-                if (employeeTime.Type == "0" && !employeeTimeEntity.IsConsolidated)
-                {
-                    return new BadRequestObjectResult(new Response
-                    {
-                        IsSuccess = false,
-                        Message = $"the employee already has a registered input."
-                    });
-                }
-            }
-
-            if (employeeTime.Type.Equals("0") && !employeeTimeEntity.IsConsolidated)
-            {
-                return new BadRequestObjectResult(new Response
-                {
-                    IsSuccess = false,
-                    Message = $"the employee already has a registered input."
-                });
-
-            }         
 
             TableOperation addOperation = TableOperation.Insert(employeeTimeEntity);
             await employeeTimeTable.ExecuteAsync(addOperation);
 
             string message = "New employee time stored in table";
+            log.LogInformation(message);
+
+            return new OkObjectResult(new Response
+            {
+                IsSuccess = true,
+                Message = message,
+                Result = employeeTimeEntity
+            });
+        }
+
+        [FunctionName(nameof(UpdateTime))]
+        public static async Task<IActionResult> UpdateTime(
+           [HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "employeeTime/{id}")] HttpRequest req,
+           [Table("employeeTime", Connection = "AzureWebJobsStorage")] CloudTable employeeTimeTable,
+           string id,
+           ILogger log)
+        {
+            log.LogInformation($"Update for employeeTime: {id}, received.");
+
+            string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
+            EmployeeTime employeeTime = JsonConvert.DeserializeObject<EmployeeTime>(requestBody);
+
+            //Validate employee id
+            TableOperation findOperation = TableOperation.Retrieve<EmployeeTimeEntity>("EmployeeTime", id);
+            TableResult findResult = await employeeTimeTable.ExecuteAsync(findOperation);
+            if (findResult.Result == null)
+            {
+                return new BadRequestObjectResult(new Response
+                {
+                    IsSuccess = false,
+                    Message = "EmployeeTime not found."
+                });
+            }
+
+            //Update employeeTime
+            EmployeeTimeEntity employeeTimeEntity = (EmployeeTimeEntity)findResult.Result;
+            employeeTimeEntity.IsConsolidated = employeeTime.IsConsolidated;
+            if (!string.IsNullOrEmpty(employeeTime?.IdEmployee.ToString()))
+            {
+                employeeTimeEntity.IdEmployee = employeeTime.IdEmployee;
+            }
+
+
+
+            TableOperation addOperation = TableOperation.Replace(employeeTimeEntity);
+            await employeeTimeTable.ExecuteAsync(addOperation);
+
+            string message = $"employee time {id} updated in table";
             log.LogInformation(message);
 
             return new OkObjectResult(new Response
