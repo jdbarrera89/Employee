@@ -35,7 +35,7 @@ namespace Employee.Functions.Functions
                     IsSuccess = false,
                     Message = "The request must have IdEmployee and type."
                 });
-            }           
+            }
 
             EmployeeTimeEntity employeeTimeEntity = new EmployeeTimeEntity
             {
@@ -47,8 +47,6 @@ namespace Employee.Functions.Functions
                 PartitionKey = "EmployeeTime",
                 RowKey = Guid.NewGuid().ToString()
             };
-
-
 
             TableOperation addOperation = TableOperation.Insert(employeeTimeEntity);
             await employeeTimeTable.ExecuteAsync(addOperation);
@@ -79,6 +77,7 @@ namespace Employee.Functions.Functions
             //Validate employee id
             TableOperation findOperation = TableOperation.Retrieve<EmployeeTimeEntity>("EmployeeTime", id);
             TableResult findResult = await employeeTimeTable.ExecuteAsync(findOperation);
+            
             if (findResult.Result == null)
             {
                 return new BadRequestObjectResult(new Response
@@ -163,6 +162,35 @@ namespace Employee.Functions.Functions
             });
         }
 
-    }
+        [FunctionName(nameof(DeleteEmployeeTime))]
+        public static async Task<IActionResult> DeleteEmployeeTime(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "employeeTime/{id}")] HttpRequest req,
+            [Table("employeeTime", "EmployeeTime", "{id}", Connection = "AzureWebJobsStorage")] EmployeeTimeEntity employeeTimeEntity,
+            [Table("employeeTime", Connection = "AzureWebJobsStorage")] CloudTable todoTable,
+            string id,
+            ILogger log)
+        {
+            log.LogInformation($"Delete employeeTime: {id}, received.");
 
+            if (employeeTimeEntity == null)
+            {
+                return new BadRequestObjectResult(new Response
+                {
+                    IsSuccess = false,
+                    Message = "EmployeeTime not found."
+                });
+            }
+
+            await todoTable.ExecuteAsync(TableOperation.Delete(employeeTimeEntity));
+            string message = $"Todo: {employeeTimeEntity.RowKey}, deleted.";
+            log.LogInformation(message);
+
+            return new OkObjectResult(new Response
+            {
+                IsSuccess = true,
+                Message = message,
+                Result = employeeTimeEntity
+            });
+        }
+    }
 }
