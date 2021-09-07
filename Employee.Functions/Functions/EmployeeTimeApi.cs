@@ -111,5 +111,58 @@ namespace Employee.Functions.Functions
                 Result = employeeTimeEntity
             });
         }
+
+        [FunctionName(nameof(GetAllEmployeeTimes))]
+        public static async Task<IActionResult> GetAllEmployeeTimes(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "employeeTime")] HttpRequest req,
+        [Table("EmployeeTime", Connection = "AzureWebJobsStorage")] CloudTable employeeTimeTable,
+        ILogger log)
+        {
+            log.LogInformation("Get all todos received.");
+
+            TableQuery<EmployeeTimeEntity> query = new TableQuery<EmployeeTimeEntity>();
+            TableQuerySegment<EmployeeTimeEntity> employeeTimes = await employeeTimeTable.ExecuteQuerySegmentedAsync(query, null);
+
+            string message = "Retrieved all employeeTimes.";
+            log.LogInformation(message);
+
+            return new OkObjectResult(new Response
+            {
+                IsSuccess = true,
+                Message = message,
+                Result = employeeTimes
+            });
+        }
+
+        [FunctionName(nameof(GetEmployeeTimeById))]
+        public static IActionResult GetEmployeeTimeById(
+           [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "employeeTime/{id}")] HttpRequest req,
+           [Table("employeeTime", "EmployeeTime", "{id}", Connection = "AzureWebJobsStorage")] EmployeeTimeEntity employeeTimeEntity,
+           string id,
+           ILogger log)
+        {
+            log.LogInformation($"Get todo by id: {id}, received.");
+
+            if (employeeTimeEntity == null)
+            {
+                return new BadRequestObjectResult(new Response
+                {
+                    IsSuccess = false,
+                    Message = "Todo not found."
+                });
+            }
+
+            string message = $"Todo: {employeeTimeEntity.RowKey}, retrieved.";
+            log.LogInformation(message);
+
+            return new OkObjectResult(new Response
+            {
+                IsSuccess = true,
+                Message = message,
+                Result = employeeTimeEntity
+            });
+        }
+
     }
+
 }
