@@ -118,7 +118,7 @@ namespace Employee.Functions.Functions
         [Table("EmployeeTime", Connection = "AzureWebJobsStorage")] CloudTable employeeTimeTable,
         ILogger log)
         {
-            log.LogInformation("Get all todos received.");
+            log.LogInformation("Get all EmployeeTimes received.");
 
             TableQuery<EmployeeTimeEntity> query = new TableQuery<EmployeeTimeEntity>();
             TableQuerySegment<EmployeeTimeEntity> employeeTimes = await employeeTimeTable.ExecuteQuerySegmentedAsync(query, null);
@@ -141,18 +141,18 @@ namespace Employee.Functions.Functions
            string id,
            ILogger log)
         {
-            log.LogInformation($"Get todo by id: {id}, received.");
+            log.LogInformation($"Get employeeTime by id: {id}, received.");
 
             if (employeeTimeEntity == null)
             {
                 return new BadRequestObjectResult(new Response
                 {
                     IsSuccess = false,
-                    Message = "Todo not found."
+                    Message = "EmployeeTime not found."
                 });
             }
 
-            string message = $"Todo: {employeeTimeEntity.RowKey}, retrieved.";
+            string message = $"EmployeeTime: {employeeTimeEntity.RowKey}, retrieved.";
             log.LogInformation(message);
 
             return new OkObjectResult(new Response
